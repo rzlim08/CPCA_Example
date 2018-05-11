@@ -13,7 +13,6 @@
 %% Imports and Dependencies
 % 
 % First add the packages that we'll need. I'll try to use as few dependencies as possible here. 
-% The only thing we should need in matlab is spm for its reading functions (spm_vol, spm_read_vols). 
 % Later releases of matlab have built-in functions for this. 
 % Jimmy Shen's toolbox also is a good option 
 % https://www.mathworks.com/matlabcentral/fileexchange/8797-tools-for-nifti-and-analyze-image
@@ -23,7 +22,8 @@
 % Matlab 
 
 % Change this path if you did not set up your download in a standard way
-addpath(genpath([pwd filesep 'dependencies']));
+restoredefaultpath
+addpath(genpath([pwd filesep 'dependencies2']));
 
 %% Data
 % We'll also need to the data, so make sure we have a reference to that too. 
@@ -39,12 +39,10 @@ scans = dir([image_path filesep '*.img'])
 %%
 % We can see there are 214 scans for this subject. We now want to get a reference to all
 % the images and store them in a way that matlab can read. 
-% We'll use the SPM functions 'spm_vol' and 'spm_read_vols' to read the headers and
-% images respectively. So we will read a single scan in. 
 scan = scans(1);
 ss_path = [image_path filesep scan.name];
-ss_hdr = spm_vol(ss_path)
-ss_img = spm_read_vols(ss_hdr);
+ss_hdr = load_nii(ss_path)
+ss_img = ss_hdr.img;
 figure;
 imagesc(squeeze(ss_img(:,:,17)))
 
@@ -57,13 +55,13 @@ end
 % create a cell array of a path to each scan
 path_to_scans = path_to_scans';
 % read in scan headers
-scan_hdr = spm_vol(path_to_scans);
+scan_hdr = cellfun(@load_nii, path_to_scans, 'UniformOutput', 0);
 
 %%
 % So now we have a cell array storing the spm headers for all the images. 
 % We want to read those in and append them together to form a 2 dimensional matrix.
 % We can use Matlab's cellfun for this.
- read_and_reshape = @(im_hdr)(reshape(spm_read_vols(im_hdr), 1,[]));
+ read_and_reshape = @(im_hdr)(double(reshape(im_hdr.img, 1,[])));
  im_cell = cellfun(read_and_reshape, scan_hdr, 'UniformOutput', 0);
  brain_scans = cell2mat(im_cell);
 size(brain_scans)
@@ -81,7 +79,7 @@ thresholded = brain_scans>global_mean;
 % for each voxel, if every scan is above the 
 % global mean, include the voxel in the analysis
 mask_test = floor(sum(thresholded)/size(brain_scans,1)); 
-m = reshape(mask_test, ss_hdr.dim);
+m = reshape(mask_test, size(ss_hdr.img));
 figure;
 imagesc(m(:,:,17))
 
@@ -93,7 +91,7 @@ size(masked_im)
 %%
 % For the purposes of this workshop, we'll use a precreated mask.
 % read in and flatten mask
-mask = read_and_reshape(spm_vol([data_path filesep 'mask.img']));
+mask = read_and_reshape(load_nii([data_path filesep 'mask.img']));
 
 %%
 % To get our data matrix, we will select only the voxels that
@@ -141,14 +139,16 @@ for j = 1:conditions
             eye(bins);
     end
 end
-a = calculate_hrf_shape([Letters2' ones(9, 1)*10], 214, 3);
-b = calculate_hrf_shape([Letters4' ones(9, 1)*10], 214, 3);
-c = calculate_hrf_shape([Letters6' ones(9, 1)*10], 214, 3);
-d = calculate_hrf_shape([Letters8' ones(9, 1)*10], 214, 3);
-plot([a b c])
-title('HRF shape estimation for design')
-xlabel('scans')
-ylabel('hrf')
+
+%% won't work on non-linux machines, SPM not compiled for the platform
+% a = calculate_hrf_shape([Letters2' ones(9, 1)*10], 214, 3);
+% b = calculate_hrf_shape([Letters4' ones(9, 1)*10], 214, 3);
+% c = calculate_hrf_shape([Letters6' ones(9, 1)*10], 214, 3);
+% d = calculate_hrf_shape([Letters8' ones(9, 1)*10], 214, 3);
+% plot([a b c])
+% title('HRF shape estimation for design')
+% xlabel('scans')
+% ylabel('hrf')
 
 %%
 % Now we have a design matrix for each of the different conditions and onsets.
