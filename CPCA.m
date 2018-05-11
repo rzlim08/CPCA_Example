@@ -22,8 +22,7 @@
 % Matlab 
 
 % Change this path if you did not set up your download in a standard way
-restoredefaultpath
-addpath(genpath([pwd filesep 'dependencies2']));
+addpath(genpath([pwd filesep 'dependencies']));
 
 %% Data
 % We'll also need to the data, so make sure we have a reference to that too. 
